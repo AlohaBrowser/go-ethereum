@@ -255,8 +255,9 @@ func DecodeFromHex(s string) ([]byte, error) {
 
 // HashTypedData calculates hash of a given typed data string.
 func HashTypedData(td string) (signature []byte, _ error) {
-	// 1. Prepare data: replace potential int chainId value
-	//    with the same string representation.
+	// Prepare input data: replace potential int chainId value
+	// with the same string representation.
+	// See https://github.com/ethereum/go-ethereum/issues/24441
 	var input string
 	//goland:noinspection RegExpRedundantEscape
 	intChainRegexp := regexp.MustCompile("chainId\\\":(\\d+)")
