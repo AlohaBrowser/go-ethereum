@@ -20,8 +20,11 @@ package geth
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
+	"regexp"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -248,4 +251,34 @@ func EncodeToHex(b []byte) string {
 // DecodeFromHex decodes a hex string with 0x prefix.
 func DecodeFromHex(s string) ([]byte, error) {
 	return hexutil.Decode(s)
+}
+
+// HashTypedData calculates hash of a given typed data string.
+func HashTypedData(td string) (signature []byte, _ error) {
+	// 1. Prepare data: replace potential int chainId value
+	//    with the same string representation.
+	var input string
+	//goland:noinspection RegExpRedundantEscape
+	intChainRegexp := regexp.MustCompile("chainId\\\":(\\d+)")
+	if intChainRegexp.MatchString(td) {
+		replacement := intChainRegexp.FindStringSubmatch(td)[1]
+		input = intChainRegexp.ReplaceAllString(td, "chainId\":\""+replacement+"\"")
+	}
+
+	var typedData TypedData
+	json.Unmarshal([]byte(input), &typedData)
+
+	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
+	if err != nil {
+		return nil, err
+	}
+
+	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	rawData := []byte(fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash)))
+	sighash := crypto.Keccak256(rawData)
+	return sighash, nil
 }
