@@ -29,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/mobile/signer_types"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -266,7 +267,7 @@ func HashTypedData(td string) (signature []byte, _ error) {
 		input = intChainRegexp.ReplaceAllString(td, "chainId\":\""+replacement+"\"")
 	}
 
-	var typedData TypedData
+	var typedData signer_types.TypedData
 	json.Unmarshal([]byte(input), &typedData)
 
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
