@@ -16,7 +16,7 @@
 
 // File was copied from signed/core/apitypes/types.go without any changes.
 
-package geth
+package signer_types
 
 import (
 	"bytes"
