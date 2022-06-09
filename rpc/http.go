@@ -234,16 +234,9 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var buf bytes.Buffer
-		var body []byte
-		if _, err := buf.ReadFrom(resp.Body); err == nil {
-			body = buf.Bytes()
-		}
-
 		return nil, HTTPError{
 			Status:     resp.Status,
 			StatusCode: resp.StatusCode,
-			Body:       body,
 		}
 	}
 	return resp.Body, nil
