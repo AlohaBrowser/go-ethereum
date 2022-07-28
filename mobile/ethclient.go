@@ -313,3 +313,11 @@ func (ec *EthereumClient) EstimateGas(ctx *Context, msg *CallMsg) (gas int64, _ 
 func (ec *EthereumClient) SendTransaction(ctx *Context, tx *Transaction) error {
 	return ec.client.SendTransaction(ctx.context, tx.tx)
 }
+
+// SuggestGasTipCap retrieves the currently suggested gas tip cap after 1559 to
+// allow a timely execution of a transaction.
+// Under the hood it calls `eth_maxPriorityFeePerGas`.
+func (ec *EthereumClient) SuggestGasTipCap(ctx *Context) (gas *BigInt, _ error) {
+	rawGas, err := ec.client.SuggestGasTipCap(ctx.context)
+	return &BigInt{rawGas}, err
+}
