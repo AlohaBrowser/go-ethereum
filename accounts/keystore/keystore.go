@@ -79,6 +79,8 @@ type unlocked struct {
 	abort chan struct{}
 }
 
+var ReadDir func(name string) ([]os.DirEntry, error) = os.ReadDir
+
 // NewKeyStore creates a keystore for the given directory.
 func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	keydir, _ = filepath.Abs(keydir)

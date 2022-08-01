@@ -40,7 +40,7 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set, mapset.Set, mapset.Set, er
 	t0 := time.Now()
 
 	// List all the failes from the keystore folder
-	files, err := os.ReadDir(keyDir)
+	files, err := ReadDir(keyDir)
 	if err != nil {
 		return nil, nil, nil, err
 	}
