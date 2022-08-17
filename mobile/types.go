@@ -22,9 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -236,13 +237,38 @@ func NewContractCreation(nonce int64, amount *BigInt, gasLimit int64, gasPrice *
 	return &Transaction{types.NewContractCreation(uint64(nonce), amount.bigint, uint64(gasLimit), gasPrice.bigint, common.CopyBytes(data))}
 }
 
-// NewTransaction creates a new transaction with the given properties. Contracts
+// NewLegacyTransaction creates a new legacy transaction with the given properties. Contracts
 // can be created by transacting with a nil recipient.
-func NewTransaction(nonce int64, to *Address, amount *BigInt, gasLimit int64, gasPrice *BigInt, data []byte) *Transaction {
+func NewLegacyTransaction(nonce int64, to *Address, amount *BigInt, gasLimit int64, gasPrice *BigInt, data []byte) *Transaction {
 	if to == nil {
 		return &Transaction{types.NewContractCreation(uint64(nonce), amount.bigint, uint64(gasLimit), gasPrice.bigint, common.CopyBytes(data))}
 	}
 	return &Transaction{types.NewTransaction(uint64(nonce), to.address, amount.bigint, uint64(gasLimit), gasPrice.bigint, common.CopyBytes(data))}
+}
+
+// NewTransaction creates a new EIP-1559 transaction with the given properties.
+func NewTransaction(from *Address, to *Address, nonce int64, gas int64, maxFeePerGas *BigInt, maxPriorityFeePerGas *BigInt, value *BigInt, chainId *BigInt, data []byte) *Transaction {
+	nonceUint64 := uint64(nonce)
+	gasUint64 := uint64(gas)
+	dataBytes := common.CopyBytes(data)
+	// Legacy field that shouldn't be used for this type of transactions.
+	var gasPrice *hexutil.Big = nil
+
+	txArgs := &ethapi.TransactionArgs{
+		From:                 &from.address,
+		To:                   &to.address,
+		Gas:                  (*hexutil.Uint64)(&gasUint64),
+		GasPrice:             gasPrice,
+		MaxFeePerGas:         (*hexutil.Big)(maxFeePerGas.bigint),
+		MaxPriorityFeePerGas: (*hexutil.Big)(maxPriorityFeePerGas.bigint),
+		Value:                (*hexutil.Big)(value.bigint),
+		Nonce:                (*hexutil.Uint64)(&nonceUint64),
+		Data:                 (*hexutil.Bytes)(&dataBytes),
+		Input:                (*hexutil.Bytes)(&dataBytes),
+		AccessList:           nil,
+		ChainID:              (*hexutil.Big)(chainId.bigint),
+	}
+	return &Transaction{txArgs.ToTransaction()}
 }
 
 // NewTransactionFromRLP parses a transaction from an RLP data dump.
