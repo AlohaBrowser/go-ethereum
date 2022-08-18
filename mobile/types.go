@@ -247,6 +247,7 @@ func NewLegacyTransaction(nonce int64, to *Address, amount *BigInt, gasLimit int
 }
 
 // NewTransaction creates a new EIP-1559 transaction with the given properties.
+// The only optional parameter is [to].
 func NewTransaction(from *Address, to *Address, nonce int64, gas int64, maxFeePerGas *BigInt, maxPriorityFeePerGas *BigInt, value *BigInt, chainId *BigInt, data []byte) *Transaction {
 	nonceUint64 := uint64(nonce)
 	gasUint64 := uint64(gas)
@@ -254,9 +255,14 @@ func NewTransaction(from *Address, to *Address, nonce int64, gas int64, maxFeePe
 	// Legacy field that shouldn't be used for this type of transactions.
 	var gasPrice *hexutil.Big = nil
 
+	var toAddress *common.Address = nil
+	if to != nil {
+		toAddress = &to.address
+	}
+
 	txArgs := &ethapi.TransactionArgs{
 		From:                 &from.address,
-		To:                   &to.address,
+		To:                   toAddress,
 		Gas:                  (*hexutil.Uint64)(&gasUint64),
 		GasPrice:             gasPrice,
 		MaxFeePerGas:         (*hexutil.Big)(maxFeePerGas.bigint),
