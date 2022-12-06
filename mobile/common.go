@@ -23,12 +23,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
 	"regexp"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
@@ -283,4 +283,38 @@ func HashTypedData(td string) (signature []byte, _ error) {
 	rawData := []byte(fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash)))
 	sighash := crypto.Keccak256(rawData)
 	return sighash, nil
+}
+
+// PersonalEcRecover returns the address of wallet that created the given signature.
+func PersonalEcRecover(hash, sig []byte) ([]byte, error) {
+	// First, check original signature
+	if publicKey, recoverError := recoverAndUnmarshal(hash, sig); recoverError == nil {
+		return publicKey, nil
+	}
+
+	// Next, check signature with fixed signature byte
+	var recoverError error
+	for v := 0; v <= 3; v++ {
+		sig[64] = byte(v)
+		if publicKey, err := recoverAndUnmarshal(hash, sig); err == nil {
+			return publicKey, nil
+		} else {
+			recoverError = err
+		}
+	}
+	return nil, recoverError
+}
+
+func recoverAndUnmarshal(hash, sig []byte) ([]byte, error) {
+	recoveredPublicKey, recoverError := crypto.Ecrecover(hash, sig)
+	if recoverError != nil {
+		return nil, recoverError
+	}
+
+	publicKey, unmarshalError := crypto.UnmarshalPubkey(recoveredPublicKey)
+	if unmarshalError == nil {
+		return crypto.PubkeyToAddress(*publicKey).Bytes(), nil
+	} else {
+		return nil, unmarshalError
+	}
 }
