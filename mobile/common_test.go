@@ -21,6 +21,7 @@ package geth
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -56,10 +57,23 @@ func TestJsonConversion(t *testing.T) {
 }
 
 func TestPersonalEcRecoverSignedByMetamask(t *testing.T) {
-	testAddr := common.HexToAddress("0x9d067c41aa671db9c7031a13ab00d38f1d049dd1")
+	testAddr := common.HexToAddress("0x232BfEBD605a8b16509261a5EfE26e58E9537829")
 
-	msg, _ := DecodeFromHex("0xaf1dee894786c304604a039b041463c9ab8defb393403ea03cf2c85b1eb8cbfd")
-	sig, _ := DecodeFromHex("0xf7127b17ea33abd3c7b2e8b5649939b3cc596a786845933143092efd589696df787c51964de6272bd2de0794971a554f2821a9795ed237b3003ae90a5a29f3ee01")
+	msg := []byte("Example `personal_sign` message")
+	sig, _ := DecodeFromHex("0x606f9ef6e664241893293a3bbb766df1e13cea010181a90398e31a71805d8a675d765f8d085a228e2e7450a574cb8d4fb1273308bacc66a2cfd8592ae0698c461b")
+
+	addressBytes, recoverError := PersonalEcRecover(msg, sig)
+	assert.Equal(t, nil, recoverError)
+
+	recoveredAddr := common.HexToAddress(common.Bytes2Hex(addressBytes))
+	assert.Equal(t, testAddr, recoveredAddr)
+}
+
+func TestPersonalEcRecoverSignedByMetamaskTestSite(t *testing.T) {
+	testAddr := common.HexToAddress("0x63b4512c705638bbba1ebc41af6b2fc3da1d8c03")
+
+	msg := []byte("Example `personal_sign` message")
+	sig, _ := DecodeFromHex("0x8a1a0dd717418a27a0763154d8a9db587b228408e5bd5a9445ee2ba38fd48c68692bd7af9b955ae0b4af5f19f992a0d699f95490a18df4ef6b9d344ca635ade91c")
 
 	addressBytes, recoverError := PersonalEcRecover(msg, sig)
 	assert.Equal(t, nil, recoverError)
@@ -75,8 +89,10 @@ func TestPersonalEcRecoverSignedByGo(t *testing.T) {
 	key, _ := crypto.HexToECDSA(testPrivHex)
 	testAddr := common.HexToAddress(testAddrHex)
 
-	msg := crypto.Keccak256([]byte("foo"))
-	sig, signError := crypto.Sign(msg, key)
+	msg := []byte("foo")
+	msgToSign, _ := accounts.TextAndHash(msg)
+	sig, signError := crypto.Sign(msgToSign, key)
+	sig[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
 	assert.Equal(t, nil, signError)
 
 	addressBytes, recoverError := PersonalEcRecover(msg, sig)

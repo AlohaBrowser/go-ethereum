@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -286,35 +287,18 @@ func HashTypedData(td string) (signature []byte, _ error) {
 }
 
 // PersonalEcRecover returns the address of wallet that created the given signature.
-func PersonalEcRecover(hash, sig []byte) ([]byte, error) {
-	// First, check original signature
-	if publicKey, recoverError := recoverAndUnmarshal(hash, sig); recoverError == nil {
-		return publicKey, nil
+func PersonalEcRecover(message, sig []byte) ([]byte, error) {
+	if len(sig) != crypto.SignatureLength {
+		return nil, fmt.Errorf("signature must be %d bytes long", crypto.SignatureLength)
 	}
+	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
+		return nil, fmt.Errorf("invalid Ethereum signature (V is not 27 or 28)")
+	}
+	sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
 
-	// Next, check signature with fixed signature byte
-	var recoverError error
-	for v := 0; v <= 3; v++ {
-		sig[64] = byte(v)
-		if publicKey, err := recoverAndUnmarshal(hash, sig); err == nil {
-			return publicKey, nil
-		} else {
-			recoverError = err
-		}
+	rpk, err := crypto.SigToPub(accounts.TextHash(message), sig)
+	if err != nil {
+		return nil, err
 	}
-	return nil, recoverError
-}
-
-func recoverAndUnmarshal(hash, sig []byte) ([]byte, error) {
-	recoveredPublicKey, recoverError := crypto.Ecrecover(hash, sig)
-	if recoverError != nil {
-		return nil, recoverError
-	}
-
-	publicKey, unmarshalError := crypto.UnmarshalPubkey(recoveredPublicKey)
-	if unmarshalError == nil {
-		return crypto.PubkeyToAddress(*publicKey).Bytes(), nil
-	} else {
-		return nil, unmarshalError
-	}
+	return crypto.PubkeyToAddress(*rpk).Bytes(), nil
 }
